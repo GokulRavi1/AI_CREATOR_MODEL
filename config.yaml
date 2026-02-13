@@ -1,0 +1,54 @@
+# ============================================
+# AI Fixed Character Generation System
+# Central Configuration
+# ============================================
+
+comfyui:
+  host: "127.0.0.1"
+  port: 8188
+  workflow_dir: "./workflows"
+
+generation:
+  default_resolution: [512, 512]
+  default_steps: 25
+  default_cfg_scale: 7.5
+  default_sampler: "euler_a"
+  default_scheduler: "normal"
+
+lora:
+  default_weight: 0.8
+  models_dir: "./models/loras"
+  training:
+    network_rank: 32
+    alpha: 32
+    resolution: 512
+    batch_size: 1
+    epochs: 12
+    learning_rate: 0.0001
+
+voice:
+  engine: "piper"
+  model: "en_US-lessac-medium"
+  sample_rate: 22050
+
+avatar:
+  engine: "sadtalker"
+  checkpoint_dir: "./models/sadtalker"
+
+video:
+  engine: "animatediff"
+  fps: 8
+  frames: 16
+  motion_module: "mm_sd_v15_v2.ckpt"
+
+output:
+  base_dir: "./outputs"
+  images_dir: "./outputs/images"
+  videos_dir: "./outputs/videos"
+  avatars_dir: "./outputs/avatars"
+  audio_dir: "./outputs/audio"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true

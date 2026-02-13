@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="AI Fixed Character Generation System — Generate consistent AI character images, videos, and talking avatars">
+    <title>AI Character Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">◆</span>
+                <h1>AI Character Studio</h1>
+            </div>
+            <span class="version-badge">v0.2.0</span>
+        </div>
+
+        <!-- Mode Switcher -->
+        <div class="app-mode-switch">
+            <button class="mode-btn active" data-mode="identity">Identity Lab</button>
+            <button class="mode-btn" data-mode="studio">Content Studio</button>
+        </div>
+
+        <div class="header-right">
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════ MAIN LAYOUT ═══════════════════════════ -->
+    <main class="app-main">
+
+        <!-- ─────── LEFT PANEL: Controls ─────── -->
+        <aside class="control-panel">
+
+            <!-- ══════ MODE: IDENTITY LAB ══════ -->
+            <div id="modeIdentityControls" class="mode-controls active">
+
+                <section class="panel-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">👤</span>
+                        Character
+                    </h2>
+                    <div class="form-group">
+                        <label for="characterSelect">Active Character</label>
+                        <select id="characterSelect" class="input-select">
+                            <option value="">No character selected</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="loraSelect">LoRA Model</label>
+                        <select id="loraSelect" class="input-select">
+                            <option value="">No LoRA (base model)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="loraWeight">LoRA Weight</label>
+                        <div class="slider-group">
+                            <input type="range" id="loraWeight" min="0" max="1.5" step="0.05" value="0.8"
+                                class="input-range">
+                            <span class="range-value" id="loraWeightValue">0.80</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Scene Prompt -->
+                <section class="panel-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🎬</span>
+                        Scene
+                    </h2>
+                    <div class="form-group">
+                        <label for="scenePrompt">Prompt</label>
+                        <textarea id="scenePrompt" class="input-textarea" rows="4"
+                            placeholder="Describe the scene, pose, environment...&#10;e.g. sitting in a modern cafe, warm lighting, smiling"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="negativePrompt">Negative Prompt</label>
+                        <textarea id="negativePrompt" class="input-textarea input-textarea-sm" rows="2"
+                            placeholder="blurry, low quality, distorted..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cameraStyle">Camera</label>
+                            <select id="cameraStyle" class="input-select">
+                                <option value="">Random</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="lightingStyle">Lighting</label>
+                            <select id="lightingStyle" class="input-select">
+                                <option value="">Random</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Generation Settings -->
+                <section class="panel-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">⚙️</span>
+                        Settings
+                    </h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="imgWidth">Width</label>
+                            <input type="number" id="imgWidth" class="input-number" value="512" min="256" max="1024"
+                                step="64">
+                        </div>
+                        <div class="form-group">
+                            <label for="imgHeight">Height</label>
+                            <input type="number" id="imgHeight" class="input-number" value="512" min="256" max="1024"
+                                step="64">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="steps">Steps</label>
+                            <input type="number" id="steps" class="input-number" value="25" min="1" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgScale">CFG Scale</label>
+                            <input type="number" id="cfgScale" class="input-number" value="7.5" min="1" max="20"
+                                step="0.5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="seed">Seed (-1 = random)</label>
+                        <input type="number" id="seed" class="input-number" value="-1">
+                    </div>
+                </section>
+
+                <!-- Generate Buttons -->
+                <section class="panel-section panel-actions">
+                    <button class="btn btn-primary btn-glow" id="btnGenerateImage">
+                        <span class="btn-icon">🖼️</span>
+                        Generate Image
+                    </button>
+                    <button class="btn btn-secondary" id="btnGenerateVideo">
+                        <span class="btn-icon">🎥</span>
+                        Generate Reel
+                    </button>
+                    <button class="btn btn-secondary" id="btnGenerateAvatar">
+                        <span class="btn-icon">🗣️</span>
+                        Talking Avatar
+                    </button>
+                    <button class="btn btn-accent" id="btnBuildPrompt">
+                        <span class="btn-icon">✨</span>
+                        Preview Prompt
+                    </button>
+                </section>
+
+        </aside>
+
+        <!-- ─────── RIGHT PANEL: Output ─────── -->
+        <section class="output-panel">
+
+            <!-- Tabs -->
+            <div class="output-tabs">
+                <button class="tab" data-tab="characters" id="tabCharacters">Characters</button>
+                <button class="tab active" data-tab="gallery" id="tabGallery">Gallery</button>
+                <button class="tab" data-tab="studio" id="tabStudio" style="display:none;">Studio Canvas</button>
+                <button class="tab" data-tab="prompt" id="tabPrompt">Prompt Preview</button>
+                <button class="tab" data-tab="system" id="tabSystem">System</button>
+            </div>
+
+            <!-- Characters Tab — Identity Lab -->
+            <div class="tab-content" id="charactersContent">
+                <div class="characters-panel">
+
+                    <!-- ComfyUI Status -->
+                    <div class="char-section comfyui-status-bar" id="comfyuiStatusBar">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="status-dot" id="comfyuiDot"></span>
+                            <span id="comfyuiStatusText">Checking ComfyUI...</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 0: Character Management -->
+                    <div class="char-section">
+                        <h3>👤 Character Management</h3>
+                        <div class="form-group">
+                            <label for="newCharName">Name</label>
+                            <input type="text" id="newCharName" class="input-text" placeholder="e.g. alex_model">
+                        </div>
+                        <div class="form-group">
+                            <label for="newCharTrigger">Trigger Word</label>
+                            <input type="text" id="newCharTrigger" class="input-text" placeholder="e.g. ohm_alex">
+                        </div>
+                        <div class="form-group">
+                            <label for="newCharDesc">Description (physical appearance)</label>
+                            <input type="text" id="newCharDesc" class="input-text"
+                                placeholder="e.g. young man with brown hair and blue eyes">
+                        </div>
+                        <button class="btn btn-primary" id="btnCreateChar">
+                            <span class="btn-icon">➕</span> Create Character
+                        </button>
+                        <div class="char-list" id="charList" style="margin-top:14px;">
+                            <p class="empty-hint">No characters yet — create one above</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Face Discovery -->
+                    <div class="char-section step-section" id="stepFaceDiscovery">
+                        <h3>
+                            <span class="step-badge">1</span>
+                            Face Discovery
+                        </h3>
+                        <p class="hint-text">Generate diverse face images — multiple angles, lighting, expressions. Then
+                            select the best identity.</p>
+
+                        <div class="form-group">
+                            <label for="faceCheckpoint">SD Checkpoint</label>
+                            <select id="faceCheckpoint" class="input-select">
+                                <option value="">Default checkpoint</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="faceSteps">Steps</label>
+                                <input type="number" id="faceSteps" class="input-number" value="25" min="1" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="faceCfg">CFG Scale</label>
+                                <input type="number" id="faceCfg" class="input-number" value="7.5" min="1" max="20"
+                                    step="0.5">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" id="btnRunFaceDiscovery">
+                            <span class="btn-icon">🎭</span> Generate Face Variations
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnLoadFaceResults" style="margin-top:6px;">
+                            📂 Load Previous Results
+                        </button>
+
+                        <div class="discovery-grid" id="faceGrid" style="margin-top:14px;"></div>
+
+                        <div id="faceSelectionActions" style="display:none; margin-top:10px;">
+                            <button class="btn btn-primary" id="btnSelectFaces">
+                                <span class="btn-icon">✅</span> Use Selected for Identity
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Body Consistency -->
+                    <div class="char-section step-section" id="stepBodyConsistency">
+                        <h3>
+                            <span class="step-badge">2</span>
+                            Body Consistency
+                        </h3>
+                        <p class="hint-text">Generate body images — standing, sitting, walking poses with consistent
+                            body shape and proportions.</p>
+
+                        <div class="form-group">
+                            <label for="bodyLoraName">Character LoRA (optional)</label>
+                            <select id="bodyLoraName" class="input-select">
+                                <option value="">No LoRA (base model)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Reference Pose (ControlNet)</label>
+                            <div id="bodyDropzone" class="dropzone">
+                                <span class="dropzone-icon">📁</span>
+                                <span class="dropzone-text">Drop image to copy pose</span>
+                                <input type="file" id="bodyRefImage" accept="image/*" hidden>
+                            </div>
+                            <div id="bodyRefPreview" class="ref-preview" style="display:none;">
+                                <img id="bodyRefImg" src="" alt="Reference">
+                                <button class="btn-icon-sm remove-ref" id="btnRemoveBodyRef">✕</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Outfits</label>
+                            <div id="bodyOutfits" class="checkbox-group">
+                                <span class="loading-text">Loading options...</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bodyWidth">Width</label>
+                                <input type="number" id="bodyWidth" class="input-number" value="512" min="256"
+                                    max="1024" step="64">
+                            </div>
+                            <div class="form-group">
+                                <label for="bodyHeight">Height</label>
+                                <input type="number" id="bodyHeight" class="input-number" value="768" min="256"
+                                    max="1024" step="64">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" id="btnRunBodyConsistency">
+                            <span class="btn-icon">🧍</span> Generate Body Variations
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnLoadBodyResults" style="margin-top:6px;">
+                            📂 Load Previous Results
+                        </button>
+
+                        <div class="discovery-grid" id="bodyGrid" style="margin-top:14px;"></div>
+
+                        <div id="bodySelectionActions" style="display:none; margin-top:10px;">
+                            <button class="btn btn-primary" id="btnSelectBodies">
+                                <span class="btn-icon">✅</span> Add Selected to Dataset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Dataset Preparation -->
+                    <div class="char-section step-section" id="stepDatasetPrep">
+                        <h3>
+                            <span class="step-badge">3</span>
+                            Dataset Preparation
+                        </h3>
+                        <p class="hint-text">Validate, resize, and auto-caption your images for LoRA training.</p>
+
+                        <div class="tool-buttons">
+                            <button class="btn btn-secondary btn-sm" id="btnValidateDataset">
+                                🔍 Validate Dataset
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="btnPrepareDataset">
+                                🔧 Resize + Caption
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="btnGetGuide">
+                                📋 Photo Guide
+                            </button>
+                        </div>
+
+                        <div class="dataset-results" id="datasetResults"></div>
+                    </div>
+
+                    <!-- Step 4: LoRA Training -->
+                    <div class="char-section step-section" id="stepTraining">
+                        <h3>
+                            <span class="step-badge">4</span>
+                            LoRA Training
+                        </h3>
+                        <p class="hint-text">Configure and launch Kohya SS training. Output: character_name.safetensors
+                        </p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="trainRank">Network Rank</label>
+                                <input type="number" id="trainRank" class="input-number" value="32" min="4" max="128">
+                            </div>
+                            <div class="form-group">
+                                <label for="trainEpochs">Epochs</label>
+                                <input type="number" id="trainEpochs" class="input-number" value="12" min="1" max="100">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="trainRes">Resolution</label>
+                                <select id="trainRes" class="input-select">
+                                    <option value="512">512×512</option>
+                                    <option value="768">768×768</option>
+                                    <option value="1024">1024×1024</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="trainVram">GPU VRAM (GB)</label>
+                                <input type="number" id="trainVram" class="input-number" value="8" min="4" max="48">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="trainAutoConfig" checked> Use recommended settings
+                            </label>
+                        </div>
+                        <button class="btn btn-primary" id="btnGenConfig">
+                            <span class="btn-icon">📝</span> Generate Config
+                        </button>
+                        <button class="btn btn-accent" id="btnStartTraining">
+                            <span class="btn-icon">🚀</span> Start Training
+                        </button>
+                        <div class="training-status" id="trainingStatus"></div>
+                    </div>
+
+                </div>
+                <!-- End Identity Controls -->
+            </div>
+            </div>
+
+            <!-- ══════ MODE: CONTENT STUDIO ══════ -->
+            <div id="modeStudioControls" class="mode-controls" style="display:none;">
+                <section class="panel-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🎨</span>
+                        Studio Generation
+                    </h2>
+
+                    <!-- Advanced Prompt -->
+                    <div class="form-group">
+                        <label for="studioPrompt">Prompt</label>
+                        <textarea id="studioPrompt" class="input-textarea" rows="4"
+                            placeholder="Detailed description..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="studioNegative">Negative Prompt</label>
+                        <textarea id="studioNegative" class="input-textarea input-textarea-sm" rows="2"
+                            placeholder="blurry, low quality..."></textarea>
+                    </div>
+
+                    <!-- Reference Image (ControlNet) -->
+                    <div class="form-group">
+                        <label>Reference Look/Pose</label>
+                        <div id="studioDropzone" class="dropzone">
+                            <span class="dropzone-icon">📁</span>
+                            <span class="dropzone-text">Drop image to copy pose</span>
+                            <input type="file" id="studioRefImage" accept="image/*" hidden>
+                        </div>
+                        <div id="studioRefPreview" class="ref-preview" style="display:none;">
+                            <img id="refImg" src="" alt="Reference">
+                            <button class="btn-icon-sm remove-ref" id="btnRemoveRef">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Settings -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="chkControlNet"> Enable Pose Control
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="chkHiresFix"> <span class="badge-new">NEW</span> Hires. Fix
+                            (Upscale)
+                        </label>
+                    </div>
+
+                    <!-- Resolution -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Aspect Ratio</label>
+                            <div class="ratio-selector">
+                                <button class="ratio-btn" data-ratio="9:16">📱 9:16</button>
+                                <button class="ratio-btn active" data-ratio="2:3">🖼️ 2:3</button>
+                                <button class="ratio-btn" data-ratio="1:1">⬜ 1:1</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-glow" id="btnStudioGenerate">
+                        <span class="btn-icon">✨</span> Generate High-Quality
+                    </button>
+                </section>
+            </div>
+
+            </aside>
+
+            <!-- Gallery Tab -->
+            <div class="tab-content active" id="galleryContent">
+                <div class="gallery-grid" id="galleryGrid">
+                    <div class="gallery-empty">
+                        <div class="empty-icon">◇</div>
+                        <p>No outputs yet</p>
+                        <p class="empty-hint">Configure your character and scene, then click Generate</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prompt Preview Tab -->
+            <div class="tab-content" id="promptContent">
+                <div class="prompt-preview">
+                    <h3>Generated Prompt</h3>
+                    <pre class="prompt-text"
+                        id="promptPreviewText">Click "Preview Prompt" to see the constructed prompt...</pre>
+                    <h3>Negative Prompt</h3>
+                    <pre class="prompt-text prompt-negative" id="negativePreviewText">—</pre>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div class="tab-content" id="systemContent">
+                <div class="system-info">
+                    <h3>System Status</h3>
+                    <div class="info-grid" id="systemInfoGrid">
+                        <div class="info-card">
+                            <span class="info-label">Server</span>
+                            <span class="info-value" id="infoServer">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="info-label">ComfyUI</span>
+                            <span class="info-value" id="infoComfyUI">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="info-label">Voice Engine</span>
+                            <span class="info-value" id="infoVoice">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="info-label">Avatar Engine</span>
+                            <span class="info-value" id="infoAvatar">—</span>
+                        </div>
+                    </div>
+
+                    <h3>Available Models</h3>
+                    <div class="model-list" id="modelList">
+                        <p class="empty-hint">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ═══════════════════════ TOAST NOTIFICATIONS ═══════════════════════ -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Frontend
+node_modules/
+dist/
+.DS_Store
+
+# Environment variables
+.env
+
+# Model files (large binaries)
+models/**/*.safetensors
+models/**/*.ckpt
+models/**/*.bin
+models/**/*.pt
+models/**/*.pth
+!models/.gitkeep
+
+# Datasets
+datasets/**/*
+!datasets/.gitkeep
+
+# Generated outputs
+outputs/**/*
+!outputs/.gitkeep
+
+# Logs
+logs/**/*
+!logs/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini

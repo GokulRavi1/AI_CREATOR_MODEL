@@ -1,0 +1,13 @@
+{
+  "name": "manjuma",
+  "trigger_word": "ohm_manju",
+  "lora_path": "",
+  "lora_weight": 0.8,
+  "preview_image": "",
+  "description": "asian girl 24 years old with good face hot look",
+  "training_params": {},
+  "dataset_path": "C:\\workspace\\OFM CODE\\ai_pipeline\\datasets\\manjuma",
+  "tags": [],
+  "created_at": "2026-02-13T12:45:20.954706",
+  "updated_at": "2026-02-13T12:45:20.954706"
+}
