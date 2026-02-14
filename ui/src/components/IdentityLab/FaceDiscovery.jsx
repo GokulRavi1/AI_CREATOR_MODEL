@@ -35,6 +35,13 @@ export default function FaceDiscovery({ character }) {
                         label="SD Checkpoint"
                     />
 
+                    <ModelSelector
+                        value={config.character_lora}
+                        onChange={(val) => setConfig(prev => ({ ...prev, character_lora: val }))}
+                        type="loras"
+                        label="Character LoRA"
+                    />
+
                     <div className="form-group mt-4">
                         <label className="text-xs font-semibold text-[var(--text-secondary)] mb-1.5 block">Base Prompt</label>
                         <textarea

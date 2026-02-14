@@ -1,5 +1,5 @@
 @echo off
-set "KOHYA_DIR=C:\Kohya_ss"  REM CHANGE THIS to your actual Kohya folder if different
+set "KOHYA_DIR=C:\workspace\OFM CODE\kohya_ss"
 set "VENV_DIR=%KOHYA_DIR%\venv"
 
 if not exist "%KOHYA_DIR%" (
@@ -13,7 +13,7 @@ echo Activate venv...
 call "%VENV_DIR%\Scripts\activate.bat"
 
 echo Starting training...
-python "%KOHYA_DIR%\sd-scripts\train_network.py" %*
+python "%KOHYA_DIR%\sd-scripts\train_network.py" --config_file ".\datasets\manjuma\training_config.toml" %*
 
 echo Training finished!
 pause

@@ -39,6 +39,7 @@ export function useTraining(character) {
     }, [characterName]);
 
     const [trainingStatus, setTrainingStatus] = useState(null); // 'idle', 'running', 'completed', 'failed', 'manual_action_required'
+    const [trainingProgress, setTrainingProgress] = useState(null);
     const [trainingOutput, setTrainingOutput] = useState(null);
     const [logs, setLogs] = useState([]);
     const pollInterval = useRef(null);
@@ -154,6 +155,7 @@ export function useTraining(character) {
                 stopPolling();
             }
             setTrainingStatus(status.status);
+            setTrainingProgress(status);
             // setLogs(status.logs); // If logs are returned
         } catch (err) {
             console.error(err);
@@ -185,6 +187,7 @@ export function useTraining(character) {
         config,
         setConfig,
         trainingStatus,
+        trainingProgress,
         trainingOutput,
 
         // Actions

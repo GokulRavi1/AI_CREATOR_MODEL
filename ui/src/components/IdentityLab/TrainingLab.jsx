@@ -12,6 +12,8 @@ export default function TrainingLab({ character }) {
         config,
         setConfig,
         trainingStatus,
+        trainingProgress,
+        trainingOutput,
         validateDataset,
         prepareDataset,
         generateConfig,
@@ -224,13 +226,39 @@ export default function TrainingLab({ character }) {
 
                         <div className="flex-1 flex flex-col justify-center items-center gap-6 p-6 border-2 border-dashed border-[var(--border-color)] rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] overflow-hidden">
                             {trainingStatus === 'running' ? (
-                                <div className="text-center animate-pulse">
-                                    <Loader2 size={48} className="animate-spin text-[var(--accent-primary)] mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-white">Training in Progress...</h3>
-                                    <p className="text-sm text-[var(--text-secondary)]">Please check the console for detailed logs.</p>
+                                <div className="text-center w-full">
+                                    <Loader2 size={32} className="animate-spin text-[var(--accent-primary)] mx-auto mb-2" />
+                                    <h3 className="text-lg font-semibold text-white mb-4">Training in Progress...</h3>
+
+                                    {/* Progress Bar */}
+                                    <div className="w-full bg-[var(--bg-primary)] rounded-full h-2.5 mb-4 overflow-hidden border border-[var(--border-color)]">
+                                        <div
+                                            className="bg-[var(--accent-primary)] h-2.5 rounded-full transition-all duration-500 relative"
+                                            style={{ width: `${Math.min(100, Math.max(5, (trainingProgress?.current_step / (trainingProgress?.total_steps || 1)) * 100))}%` }}
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-3 gap-3 mb-6">
+                                        <div className="bg-[var(--bg-primary)] p-3 rounded border border-[var(--border-color)]/50">
+                                            <div className="text-[var(--text-secondary)] text-[10px] uppercase tracking-wider mb-1">Epoch</div>
+                                            <div className="font-mono text-sm">{trainingProgress?.current_epoch || 0} / {trainingProgress?.total_epochs || '?'}</div>
+                                        </div>
+                                        <div className="bg-[var(--bg-primary)] p-3 rounded border border-[var(--border-color)]/50">
+                                            <div className="text-[var(--text-secondary)] text-[10px] uppercase tracking-wider mb-1">Steps</div>
+                                            <div className="font-mono text-sm">{trainingProgress?.current_step || 0} / {trainingProgress?.total_steps || '?'}</div>
+                                        </div>
+                                        <div className="bg-[var(--bg-primary)] p-3 rounded border border-[var(--border-color)]/50">
+                                            <div className="text-[var(--text-secondary)] text-[10px] uppercase tracking-wider mb-1">Loss</div>
+                                            <div className="font-mono text-sm text-amber-400">{trainingProgress?.loss?.toFixed(4) || '...'}</div>
+                                        </div>
+                                    </div>
+
                                     <button
                                         onClick={stopTraining}
-                                        className="btn btn-ghost border border-red-500/50 text-red-400 mt-4 px-4 py-1.5 text-xs hover:bg-red-500/10"
+                                        className="btn btn-ghost border border-red-500/50 text-red-400 px-4 py-1.5 text-xs hover:bg-red-500/10"
                                     >
                                         Stop Training
                                     </button>

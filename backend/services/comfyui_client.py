@@ -385,10 +385,25 @@ class ComfyUIClient:
             data=payload,
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req) as resp:
-            data = json.loads(resp.read())
-
-        return data["prompt_id"]
+        try:
+            with urllib.request.urlopen(req) as resp:
+                data = json.loads(resp.read())
+            return data["prompt_id"]
+        except urllib.error.HTTPError as e:
+            error_msg = e.read().decode("utf-8")
+            try:
+                # Try to parse JSON error from ComfyUI
+                err_json = json.loads(error_msg)
+                if "error" in err_json:
+                    clean_msg = json.dumps(err_json["error"], indent=2)
+                    raise Exception(f"ComfyUI Error: {clean_msg}")
+                elif "node_errors" in err_json:
+                    clean_msg = json.dumps(err_json["node_errors"], indent=2)
+                    raise Exception(f"ComfyUI Node Error: {clean_msg}")
+            except json.JSONDecodeError:
+                pass
+            # Fallback to raw text
+            raise Exception(f"ComfyUI HTTP {e.code}: {error_msg}")
 
     def wait_for_completion(self, prompt_id: str, timeout: int = 300) -> dict:
         """

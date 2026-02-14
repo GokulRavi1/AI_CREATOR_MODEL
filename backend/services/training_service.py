@@ -8,12 +8,15 @@ and monitors progress for creating character LoRA models.
 import json
 import subprocess
 import threading
+import os
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List
 from datetime import datetime
 
 from backend.utils.file_manager import PROJECT_ROOT
+from backend.config import config as app_config
+
 
 
 @dataclass
@@ -59,7 +62,7 @@ class TrainingConfig:
     gradient_checkpointing: bool = True
     gradient_accumulation_steps: int = 1
     max_token_length: int = 75
-    xformers: bool = True
+    xformers: bool = False # Disabled due to PyTorch 2.5.1 incompatibility
     cache_latents: bool = True
 
     # Misc
@@ -68,7 +71,7 @@ class TrainingConfig:
     max_train_steps: int = 0  # 0 = use epochs instead
     sample_prompts: str = ""
     sample_every_n_epochs: int = 4
-
+    
     # Data Loading (CPU Offloading)
     dataloader_num_workers: int = 8
     persistent_workers: bool = True
@@ -78,6 +81,7 @@ class TrainingConfig:
 class TrainingStatus:
     """Status of an ongoing or completed training run."""
     state: str = "idle"  # idle, running, completed, failed
+    status: str = "idle" # Alias for frontend compatibility
     current_epoch: int = 0
     total_epochs: int = 0
     current_step: int = 0
@@ -187,9 +191,11 @@ def save_training_config(config: TrainingConfig) -> str:
     config_dir = PROJECT_ROOT / "datasets" / config.character_name
     config_dir.mkdir(parents=True, exist_ok=True)
 
-    config_path = config_dir / "training_config.json"
+    import toml
+    
+    config_path = config_dir / "training_config.toml"
     with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(kohya_config, f, indent=2)
+        toml.dump(kohya_config, f)
 
     return str(config_path)
 
@@ -231,11 +237,15 @@ def get_training_status() -> dict:
                 _current_status.state = "completed"
             else:
                 _current_status.state = "failed"
+                _current_status.status = "failed"
                 _current_status.error = f"Process exited with code {retcode}"
             
             _current_status.completed_at = datetime.now().isoformat()
             _training_process = None
             
+        # Keep status in sync with state
+        _current_status.status = _current_status.state
+        
         # Parse log for progress
         if _current_status.output_path and Path(_current_status.output_path).exists():
             try:
@@ -244,20 +254,33 @@ def get_training_status() -> dict:
                     lines = f.readlines()
                     
                     # Parse latest lines for progress
-                    for line in reversed(lines[-20:]): # Check last 20 lines
-                        # Example: "epoch 1/12:  10%|█         | 10/100 [00:05<00:45,  1.98it/s, loss=0.123]"
-                        # Or standard accelerator output
+                    # Increase window to 100 lines to skip through warning noise on Windows
+                    for line in reversed(lines[-100:]):
+                        # Support both direct loss and average loss (newer Kohya)
+                        loss_match = re.search(r"(?:avr_)?loss=([0-9.]+)", line)
+                        if loss_match:
+                            _current_status.loss = float(loss_match.group(1))
+                            
+                        # Epoch parsing
+                        epoch_match = re.search(r"epoch\s+(\d+)/(\d+)", line.lower())
+                        if epoch_match:
+                            _current_status.current_epoch = int(epoch_match.group(1))
+                            _current_status.total_epochs = int(epoch_match.group(2))
+
+                        # Step parsing (tqdm format: 10/100)
+                        # Flexible pattern to catch: "|  13/1600 [" or "13/1600 [" or "steps: 13/1600"
+                        step_match = re.search(r"(\d+)/(\d+)\s+\[", line)
+                        if not step_match:
+                            step_match = re.search(r"steps:\s*(\d+)/(\d+)", line.lower())
                         
-                        # Look for "steps: 100/1000" or similar
-                        if "steps:" in line.lower() or "it/s" in line:
-                            # Try to find loss
-                            loss_match = re.search(r"loss=([0-9.]+)", line)
-                            if loss_match:
-                                _current_status.loss = float(loss_match.group(1))
-                                
-                            # Try to find step info
-                            # This is rough, depends on tqdm format
-                            pass
+                        if step_match:
+                            current = int(step_match.group(1))
+                            total = int(step_match.group(2))
+                            if total > 0:
+                                _current_status.current_step = current
+                                _current_status.total_steps = total
+                                # Stop once we find the latest progress line
+                                break
             except Exception:
                 pass
 
@@ -285,10 +308,16 @@ def start_training(config: TrainingConfig, kohya_path: str = "") -> dict:
 
     # Determine paths
     if not kohya_path:
-        # Try to find local installation
-        local_kohya = PROJECT_ROOT / "kohya_ss"
-        if local_kohya.exists():
-            kohya_path = str(local_kohya)
+        # Use configured path
+        configured_path = Path(app_config.lora.kohya_ss_path)
+        if not configured_path.is_absolute():
+            # Resolve relative to PROJECT_ROOT (e.g. "../kohya_ss")
+            # Note: PROJECT_ROOT is ai_pipeline/. Parent is workspace root.
+            # If config is "../kohya_ss", we want ai_pipeline/../kohya_ss which is workspace/kohya_ss
+            configured_path = (PROJECT_ROOT / configured_path).resolve()
+            
+        if configured_path.exists():
+            kohya_path = str(configured_path)
     
     cmd = build_training_command(config, kohya_path)
     config_path = save_training_config(config)
@@ -297,6 +326,11 @@ def start_training(config: TrainingConfig, kohya_path: str = "") -> dict:
     if kohya_path:
         venv_python = Path(kohya_path) / "venv" / "Scripts" / "python.exe"
         script_path = Path(kohya_path) / "sd-scripts" / "train_network.py"
+        
+        print(f"DEBUG: Checking Kohya paths:")
+        print(f"DEBUG: Kohya Path: {kohya_path}")
+        print(f"DEBUG: Venv Python ({venv_python.exists()}): {venv_python}")
+        print(f"DEBUG: Script Path ({script_path.exists()}): {script_path}")
         
         if venv_python.exists() and script_path.exists():
             # Construct actual command with full paths
@@ -313,12 +347,34 @@ def start_training(config: TrainingConfig, kohya_path: str = "") -> dict:
             log_file = open(log_dir / f"training_{config.character_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log", "w")
             
             try:
+                env = os.environ.copy()
+                env["PYTHONIOENCODING"] = "utf-8"
+                
+                # Write debug info to log file instead of print (safeguard against console encoding errors)
+                log_file.write(f"DEBUG: Launching training with command: {full_cmd}\n")
+                log_file.write(f"DEBUG: CWD: {PROJECT_ROOT}\n")
+                log_file.write(f"DEBUG: Env PYTHONIOENCODING: {env.get('PYTHONIOENCODING')}\n")
+                log_file.flush()
+
+                # Create separate error log
+                error_log_path = log_dir / f"training_error_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+                error_file = open(error_log_path, "w")
+                
+                # Check if script exists
+                script_path = full_cmd[1] if len(full_cmd) > 1 else ""
+                log_file.write(f"DEBUG: Script existence check: {os.path.exists(script_path)}\n")
+                log_file.flush()
+
                 _training_process = subprocess.Popen(
                     full_cmd,
                     stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    cwd=str(PROJECT_ROOT) # Run from project root so relative paths in config might need adjustment, but config uses absolute paths
+                    stderr=subprocess.STDOUT, 
+                    cwd=str(PROJECT_ROOT),
+                    env=env
                 )
+                
+                # Close file handle in parent process so it can be read by status checker
+                log_file.close()
                 
                 # Update status
                 _current_status = TrainingStatus(
@@ -388,7 +444,7 @@ def get_recommended_config(image_count: int, gpu_vram_gb: int = 8) -> TrainingCo
         config.optimizer_type = "AdamW8bit"
         config.network_rank = 16   # Lower rank saves VRAM
         config.network_alpha = 8   # Lower alpha for stability
-        config.xformers = True
+        config.xformers = False    # Disable xformers (use PyTorch SDPA)
         
         # CPU Optimization
         config.dataloader_num_workers = 8 # Maximize Ryzen 7 usage
@@ -402,7 +458,7 @@ def get_recommended_config(image_count: int, gpu_vram_gb: int = 8) -> TrainingCo
         config.cache_latents = True
         config.network_rank = 32
         config.network_alpha = 16
-        config.xformers = True
+        config.xformers = False
         config.dataloader_num_workers = 8
         
     elif gpu_vram_gb <= 8:
@@ -410,7 +466,7 @@ def get_recommended_config(image_count: int, gpu_vram_gb: int = 8) -> TrainingCo
         config.batch_size = 1
         config.network_rank = 32
         config.network_alpha = 32
-        config.xformers = True
+        config.xformers = False
         config.dataloader_num_workers = 8
         
     elif gpu_vram_gb <= 12:

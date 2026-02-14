@@ -13,6 +13,7 @@ function buildDefaultConfig(character) {
         lora_strength: character?.lora_weight || 0.8,
         limit: 4,
         checkpoint: '',
+        character_lora: '',
         width: 512,
         height: 768,
         steps: 25,
@@ -70,6 +71,7 @@ export function useDiscovery(character) {
         try {
             const payload = {
                 character_name: characterName,
+                lora_name: config.character_lora,
                 ...config
             };
 

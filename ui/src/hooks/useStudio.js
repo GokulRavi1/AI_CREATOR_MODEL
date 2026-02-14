@@ -17,7 +17,7 @@ export function useStudio() {
         height: 1024,
         steps: 30,
         cfg_scale: 7.0,
-        checkpoint: "RealVisXL_V4.0.safetensors",
+        checkpoint: "Realistic_Vision_V6.0_NV_B1_fp16.safetensors",
         lora_name: "",
         lora_strength: 0.8,
         seed: -1,
@@ -25,7 +25,7 @@ export function useStudio() {
         // ControlNet
         controlnet_enabled: false,
         controlnet_name: "controlnet-canny-sdxl-1.0",
-        control_image_name: null
+        control_image_name: ""
     });
 
     const pollInterval = useRef(null);
@@ -83,7 +83,7 @@ export function useStudio() {
     }, [addToast]);
 
     const removeControlImage = useCallback(() => {
-        setConfig(prev => ({ ...prev, control_image_name: null }));
+        setConfig(prev => ({ ...prev, control_image_name: "" }));
         setControlImageFile(null);
     }, []);
 

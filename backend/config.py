@@ -31,7 +31,7 @@ class GenerationConfig:
     default_cfg_scale: float = 7.5
     default_sampler: str = "euler_a"
     default_scheduler: str = "normal"
-    model: str = "v1-5-pruned-emaonly.safetensors"
+    model: str = "Realistic_Vision_V6.0_NV_B1_fp16.safetensors"
 
 
 @dataclass
